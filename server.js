@@ -21,9 +21,9 @@ function validateInvoicePayload(body) {
   const orderId = body.orderId || body.orderNumber;
   const invoiceURL = body.invoiceURL || body.invoiceUrl;
   const packageType = body.packageType;
-  const insurance = body.insurance;
   const incoterms = body.incoterms;
   const callbackURL = body.callbackURL || body.callbackUrl;
+  const items = body.items;
 
   if (!orderId) {
     return { error: 'orderId is required' };
@@ -49,9 +49,9 @@ function validateInvoicePayload(body) {
     orderId: String(orderId),
     invoiceURL,
     packageType,
-    insurance,
     incoterms,
-    callbackURL
+    callbackURL,
+    items
   };
 }
 
@@ -100,8 +100,8 @@ async function processQueue() {
       ...(task.type === 'invoice' || task.type === 'combined' ? {
         invoiceURL: task.invoiceURL,
         packageType: task.packageType,
-        insurance: task.insurance,
-        incoterms: task.incoterms
+        incoterms: task.incoterms,
+        items: task.items
       } : {}),
       onProgress: (msg) => job.logs.push(msg)
     });
@@ -243,9 +243,9 @@ app.post('/api/process', (req, res) => {
 
   const job = enqueueJob('combined', parsed.orderId, parsed.invoiceURL, {
     packageType: parsed.packageType,
-    insurance: parsed.insurance,
     incoterms: parsed.incoterms,
-    callbackURL: parsed.callbackURL
+    callbackURL: parsed.callbackURL,
+    items: parsed.items
   });
 
   res.status(202).json({

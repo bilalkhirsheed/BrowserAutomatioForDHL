@@ -8,8 +8,18 @@ const { combinedFlow } = require('./lib/combinedFlow');
 const orderId = process.env.ORDER_ID;
 const invoiceURL = process.env.INVOICE_URL;
 const packageType = process.env.PACKAGE_TYPE;
-const insurance = process.env.INSURANCE;
 const incoterms = process.env.INCOTERMS;
+
+// Parse items JSON string from workflow dispatch inputs
+let items = [];
+if (process.env.ITEMS) {
+  try {
+    console.log('Parsing ITEMS environment variable...');
+    items = JSON.parse(process.env.ITEMS);
+  } catch (err) {
+    console.error('ERROR: Failed to parse ITEMS JSON string:', err.message);
+  }
+}
 
 // Constant webhook callback URL
 const callbackURL = 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
@@ -18,8 +28,8 @@ console.log('--- DHL GitHub Actions Runner ---');
 console.log('Order ID:      ', orderId);
 console.log('Invoice URL:   ', invoiceURL);
 console.log('Package Type:  ', packageType);
-console.log('Insurance:     ', insurance);
 console.log('Incoterms:     ', incoterms);
+console.log('Items Count:   ', items ? items.length : 0);
 console.log('Callback URL:  ', callbackURL);
 console.log('---------------------------------');
 
@@ -49,8 +59,8 @@ async function run() {
       orderId,
       invoiceURL,
       packageType,
-      insurance,
       incoterms,
+      items,
       onProgress: (msg) => {
         console.log(`[PROGRESS] ${msg}`);
         logs.push(msg);
