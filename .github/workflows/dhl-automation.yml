@@ -1,0 +1,83 @@
+name: DHL Order Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      orderId:
+        description: 'DHL Order ID'
+        required: true
+        type: string
+      flowType:
+        description: 'Flow type to run (combined, ship, invoice)'
+        required: true
+        default: 'combined'
+        type: choice
+        options:
+          - combined
+          - ship
+          - invoice
+      invoiceURL:
+        description: 'Invoice Download URL (required for combined/invoice)'
+        required: false
+        type: string
+      packageType:
+        description: 'DHL Package Type'
+        required: false
+        type: string
+      insurance:
+        description: 'Insurance Value'
+        required: false
+        type: string
+      incoterms:
+        description: 'Incoterms (DDP/DAP/etc.)'
+        required: false
+        type: string
+      callbackURL:
+        description: 'Webhook Callback URL (e.g. Make.com hook)'
+        required: false
+        type: string
+
+jobs:
+  run-automation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node_version: '20'
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium & System Dependencies
+        run: npx playwright install chromium --with-deps
+
+      - name: Run DHL Automation
+        run: node github-runner.js
+        env:
+          # Runtime input parameters passed to script
+          ORDER_ID: ${{ inputs.orderId }}
+          FLOW_TYPE: ${{ inputs.flowType }}
+          INVOICE_URL: ${{ inputs.invoiceURL }}
+          PACKAGE_TYPE: ${{ inputs.packageType }}
+          INSURANCE: ${{ inputs.insurance }}
+          INCOTERMS: ${{ inputs.incoterms }}
+          CALLBACK_URL: ${{ inputs.callbackURL }}
+
+          # Secrets configured in GitHub Repository settings
+          DHL_EMAIL: ${{ secrets.DHL_EMAIL }}
+          DHL_PASSWORD: ${{ secrets.DHL_PASSWORD }}
+          DHL_HEADLESS: 'true' # Always headless in CI/CD environment
+
+          # Configuration defaults (fall back if not set in secrets)
+          DHL_WEIGHT: ${{ secrets.DHL_WEIGHT || '0.5' }}
+          DHL_LENGTH: ${{ secrets.DHL_LENGTH || '20' }}
+          DHL_WIDTH: ${{ secrets.DHL_WIDTH || '15' }}
+          DHL_HEIGHT: ${{ secrets.DHL_HEIGHT || '10' }}
+          DHL_PIECES: ${{ secrets.DHL_PIECES || '1' }}
+          DHL_CONTENT_DESCRIPTION: ${{ secrets.DHL_CONTENT_DESCRIPTION || 'Goods' }}
