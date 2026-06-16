@@ -1,21 +1,19 @@
 require('dotenv').config();
 
-const { uploadInvoice } = require('./lib/uploadInvoice');
-const { printLabel } = require('./lib/printLabel');
 const { combinedFlow } = require('./lib/combinedFlow');
 
 // Map workflow variables to environment variables
 const orderId = process.env.ORDER_ID;
-const flowType = process.env.FLOW_TYPE || 'combined'; // 'combined', 'ship', or 'invoice'
 const invoiceURL = process.env.INVOICE_URL;
 const packageType = process.env.PACKAGE_TYPE;
 const insurance = process.env.INSURANCE;
 const incoterms = process.env.INCOTERMS;
-const callbackURL = process.env.CALLBACK_URL || 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
+
+// Constant webhook callback URL
+const callbackURL = 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
 
 console.log('--- DHL GitHub Actions Runner ---');
 console.log('Order ID:      ', orderId);
-console.log('Flow Type:     ', flowType);
 console.log('Invoice URL:   ', invoiceURL);
 console.log('Package Type:  ', packageType);
 console.log('Insurance:     ', insurance);
@@ -28,43 +26,29 @@ if (!orderId) {
   process.exit(1);
 }
 
-if ((flowType === 'combined' || flowType === 'invoice') && !invoiceURL) {
-  console.error(`ERROR: INVOICE_URL is required for flow type "${flowType}".`);
+if (!invoiceURL) {
+  console.error('ERROR: INVOICE_URL is required.');
   process.exit(1);
 }
 
 async function run() {
   const startedAt = new Date().toISOString();
-  const logs = ['Job started via GitHub Actions'];
+  const logs = ['Job started via GitHub Actions (Combined Process)'];
   
-  let runner;
-  if (flowType === 'invoice') {
-    runner = uploadInvoice;
-  } else if (flowType === 'ship') {
-    runner = printLabel;
-  } else if (flowType === 'combined') {
-    runner = combinedFlow;
-  } else {
-    console.error(`ERROR: Invalid flowType "${flowType}". Expected: invoice, ship, combined.`);
-    process.exit(1);
-  }
-
   let status = 'queued';
   let result = null;
   let error = null;
 
   try {
     status = 'processing';
-    console.log(`Executing automation flow: ${flowType}...`);
+    console.log('Executing DHL Combined Process Automation...');
     
-    result = await runner({
+    result = await combinedFlow({
       orderId,
-      ...(flowType === 'invoice' || flowType === 'combined' ? {
-        invoiceURL,
-        packageType,
-        insurance,
-        incoterms
-      } : {}),
+      invoiceURL,
+      packageType,
+      insurance,
+      incoterms,
       onProgress: (msg) => {
         console.log(`[PROGRESS] ${msg}`);
         logs.push(msg);
@@ -85,7 +69,7 @@ async function run() {
     
     const payload = {
       jobId: `github-run-${githubRunId}`,
-      type: flowType,
+      type: 'combined',
       orderId: orderId,
       orderNumber: orderId,
       status: status,
