@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
 const { combinedFlow } = require('./lib/combinedFlow');
 
 // Map workflow variables to environment variables
@@ -66,6 +68,17 @@ async function run() {
   } finally {
     const completedAt = new Date().toISOString();
     const githubRunId = process.env.GITHUB_RUN_ID || 'local';
+
+    // Convert PDF label to Base64 so Make.com receives the actual file
+    let labelBase64 = null;
+    if (result && result.labelFile && fs.existsSync(result.labelFile)) {
+      try {
+        console.log(`Reading PDF label for Base64 conversion: ${result.labelFile}`);
+        labelBase64 = fs.readFileSync(result.labelFile).toString('base64');
+      } catch (readErr) {
+        console.error(`Failed to convert PDF to Base64: ${readErr.message}`);
+      }
+    }
     
     const payload = {
       jobId: `github-run-${githubRunId}`,
@@ -75,6 +88,7 @@ async function run() {
       status: status,
       trackingNumber: result ? result.trackingNumber : null,
       labelFile: result ? result.labelFile : null,
+      labelBase64: labelBase64, // Send Base64 data to Make.com
       result: result,
       error: error,
       completedAt: completedAt,

@@ -66,3 +66,12 @@ jobs:
           DHL_HEIGHT: ${{ secrets.DHL_HEIGHT || '10' }}
           DHL_PIECES: ${{ secrets.DHL_PIECES || '1' }}
           DHL_CONTENT_DESCRIPTION: ${{ secrets.DHL_CONTENT_DESCRIPTION || 'Goods' }}
+
+      - name: Upload PDF Label Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dhl-labels
+          path: output/*.pdf
+          if-no-files-found: ignore
+          retention-days: 7
