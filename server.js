@@ -26,6 +26,7 @@ function validateInvoicePayload(body) {
   const items = body.items;
   const numberOfPackages = body.NumberOfPackages || body.numberOfPackages || body.packagesCount;
   const orderIdentity = body.OrderIdentity || body.orderIdentity;
+  const skipPrint = body.skipPrint === true || body.flowType === 'save' || body.action === 'save';
 
   if (!orderId) {
     return { error: 'orderId is required' };
@@ -55,7 +56,8 @@ function validateInvoicePayload(body) {
     callbackURL,
     items,
     numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null,
-    orderIdentity
+    orderIdentity,
+    skipPrint
   };
 }
 
@@ -107,7 +109,8 @@ async function processQueue() {
         packageType: task.packageType,
         incoterms: task.incoterms,
         items: task.items,
-        numberOfPackages: task.numberOfPackages
+        numberOfPackages: task.numberOfPackages,
+        skipPrint: task.skipPrint
       } : {}),
       onProgress: (msg) => job.logs.push(msg)
     });
@@ -123,32 +126,36 @@ async function processQueue() {
     job.logs.push(`Job failed: ${job.error}`);
     console.error(`\n[SHIP FAILED] Order ${task.orderId}: ${job.error}\n`);
   } finally {
-    const targetWebhook = task.callbackURL || 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
-    try {
-      const webhookBody = {
-        jobId: job.jobId,
-        type: job.type,
-        orderId: job.orderId,
-        orderNumber: job.orderId,
-        OrderIdentity: job.orderIdentity || null,
-        orderIdentity: job.orderIdentity || null,
-        status: job.status,
-        trackingNumber: job.result ? job.result.trackingNumber : null,
-        labelFile: job.result ? job.result.labelFile : null,
-        result: job.result,
-        error: job.error,
-        completedAt: job.completedAt
-      };
-      console.log(`Sending webhook callback to ${targetWebhook}...`);
-      console.log('Webhook payload:', JSON.stringify(webhookBody, null, 2));
-      await fetch(targetWebhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(webhookBody)
-      });
-      console.log('Webhook callback sent successfully.');
-    } catch (webhookErr) {
-      console.error(`Failed to send webhook callback to ${targetWebhook}:`, webhookErr.message);
+    if (task.skipPrint) {
+      console.log('Save-only job completed. Webhook callback skipped as requested.');
+    } else {
+      const targetWebhook = task.callbackURL || 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
+      try {
+        const webhookBody = {
+          jobId: job.jobId,
+          type: job.type,
+          orderId: job.orderId,
+          orderNumber: job.orderId,
+          OrderIdentity: job.orderIdentity || null,
+          orderIdentity: job.orderIdentity || null,
+          status: job.status,
+          trackingNumber: job.result ? job.result.trackingNumber : null,
+          labelFile: job.result ? job.result.labelFile : null,
+          result: job.result,
+          error: job.error,
+          completedAt: job.completedAt
+        };
+        console.log(`Sending webhook callback to ${targetWebhook}...`);
+        console.log('Webhook payload:', JSON.stringify(webhookBody, null, 2));
+        await fetch(targetWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(webhookBody)
+        });
+        console.log('Webhook callback sent successfully.');
+      } catch (webhookErr) {
+        console.error(`Failed to send webhook callback to ${targetWebhook}:`, webhookErr.message);
+      }
     }
 
     processing = false;
@@ -259,7 +266,8 @@ app.post('/api/process', (req, res) => {
     callbackURL: parsed.callbackURL,
     items: parsed.items,
     numberOfPackages: parsed.numberOfPackages,
-    orderIdentity: parsed.orderIdentity
+    orderIdentity: parsed.orderIdentity,
+    skipPrint: parsed.skipPrint
   });
 
   res.status(202).json({

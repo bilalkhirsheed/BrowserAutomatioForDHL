@@ -9,7 +9,7 @@ on:
         type: string
       invoiceURL:
         description: 'Invoice Download URL'
-        required: true
+        required: false
         type: string
       packageType:
         description: 'DHL Package Type'
@@ -30,6 +30,11 @@ on:
       orderIdentity:
         description: 'Order Identity'
         required: false
+        type: string
+      flowType:
+        description: 'Flow Type (save / print / combined)'
+        required: false
+        default: 'save'
         type: string
 
 jobs:
@@ -63,6 +68,7 @@ jobs:
           NUMBER_OF_PACKAGES: ${{ inputs.numberOfPackages }}
           ITEMS: ${{ inputs.items }}
           ORDER_IDENTITY: ${{ inputs.orderIdentity }}
+          FLOW_TYPE: ${{ inputs.flowType }}
 
           # Secrets configured in GitHub Repository settings
           DHL_EMAIL: ${{ secrets.DHL_EMAIL }}
