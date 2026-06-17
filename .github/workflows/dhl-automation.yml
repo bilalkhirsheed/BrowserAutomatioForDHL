@@ -19,6 +19,10 @@ on:
         description: 'Incoterms (DDP/DAP/etc.)'
         required: false
         type: string
+      numberOfPackages:
+        description: 'Number of Packages'
+        required: false
+        type: string
       items:
         description: 'JSON string of products array'
         required: false
@@ -52,6 +56,7 @@ jobs:
           INVOICE_URL: ${{ inputs.invoiceURL }}
           PACKAGE_TYPE: ${{ inputs.packageType }}
           INCOTERMS: ${{ inputs.incoterms }}
+          NUMBER_OF_PACKAGES: ${{ inputs.numberOfPackages }}
           ITEMS: ${{ inputs.items }}
 
           # Secrets configured in GitHub Repository settings

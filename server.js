@@ -24,6 +24,7 @@ function validateInvoicePayload(body) {
   const incoterms = body.incoterms;
   const callbackURL = body.callbackURL || body.callbackUrl;
   const items = body.items;
+  const numberOfPackages = body.NumberOfPackages || body.numberOfPackages || body.packagesCount;
 
   if (!orderId) {
     return { error: 'orderId is required' };
@@ -51,7 +52,8 @@ function validateInvoicePayload(body) {
     packageType,
     incoterms,
     callbackURL,
-    items
+    items,
+    numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null
   };
 }
 
@@ -101,7 +103,8 @@ async function processQueue() {
         invoiceURL: task.invoiceURL,
         packageType: task.packageType,
         incoterms: task.incoterms,
-        items: task.items
+        items: task.items,
+        numberOfPackages: task.numberOfPackages
       } : {}),
       onProgress: (msg) => job.logs.push(msg)
     });
@@ -245,7 +248,8 @@ app.post('/api/process', (req, res) => {
     packageType: parsed.packageType,
     incoterms: parsed.incoterms,
     callbackURL: parsed.callbackURL,
-    items: parsed.items
+    items: parsed.items,
+    numberOfPackages: parsed.numberOfPackages
   });
 
   res.status(202).json({
