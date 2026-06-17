@@ -10,6 +10,7 @@ const invoiceURL = process.env.INVOICE_URL;
 const packageType = process.env.PACKAGE_TYPE;
 const incoterms = process.env.INCOTERMS;
 const numberOfPackages = process.env.NUMBER_OF_PACKAGES;
+const orderIdentity = process.env.ORDER_IDENTITY;
 
 // Parse items JSON string from workflow dispatch inputs
 let items = [];
@@ -31,6 +32,7 @@ console.log('Invoice URL:   ', invoiceURL);
 console.log('Package Type:  ', packageType);
 console.log('Incoterms:     ', incoterms);
 console.log('Packages Count:', numberOfPackages);
+console.log('Order Identity:', orderIdentity);
 console.log('Items Count:   ', items ? items.length : 0);
 console.log('Callback URL:  ', callbackURL);
 console.log('---------------------------------');
@@ -98,6 +100,8 @@ async function run() {
       type: 'combined',
       orderId: orderId,
       orderNumber: orderId,
+      OrderIdentity: orderIdentity || null,
+      orderIdentity: orderIdentity || null,
       status: status,
       trackingNumber: result ? result.trackingNumber : null,
       labelFile: result ? result.labelFile : null,

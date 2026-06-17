@@ -25,6 +25,7 @@ function validateInvoicePayload(body) {
   const callbackURL = body.callbackURL || body.callbackUrl;
   const items = body.items;
   const numberOfPackages = body.NumberOfPackages || body.numberOfPackages || body.packagesCount;
+  const orderIdentity = body.OrderIdentity || body.orderIdentity;
 
   if (!orderId) {
     return { error: 'orderId is required' };
@@ -53,13 +54,15 @@ function validateInvoicePayload(body) {
     incoterms,
     callbackURL,
     items,
-    numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null
+    numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null,
+    orderIdentity
   };
 }
 
 function validateShipPayload(body) {
   const orderId = body.orderId || body.orderNumber;
   const callbackURL = body.callbackURL || body.callbackUrl;
+  const orderIdentity = body.OrderIdentity || body.orderIdentity;
 
   if (!orderId) {
     return { error: 'orderId is required' };
@@ -73,7 +76,7 @@ function validateShipPayload(body) {
     }
   }
 
-  return { orderId: String(orderId), callbackURL };
+  return { orderId: String(orderId), callbackURL, orderIdentity };
 }
 
 async function processQueue() {
@@ -122,22 +125,26 @@ async function processQueue() {
   } finally {
     const targetWebhook = task.callbackURL || 'https://hook.us2.make.com/e9htplj662l7d5p6ijdt2cisnk9lsvvd';
     try {
+      const webhookBody = {
+        jobId: job.jobId,
+        type: job.type,
+        orderId: job.orderId,
+        orderNumber: job.orderId,
+        OrderIdentity: job.orderIdentity || null,
+        orderIdentity: job.orderIdentity || null,
+        status: job.status,
+        trackingNumber: job.result ? job.result.trackingNumber : null,
+        labelFile: job.result ? job.result.labelFile : null,
+        result: job.result,
+        error: job.error,
+        completedAt: job.completedAt
+      };
       console.log(`Sending webhook callback to ${targetWebhook}...`);
+      console.log('Webhook payload:', JSON.stringify(webhookBody, null, 2));
       await fetch(targetWebhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: job.jobId,
-          type: job.type,
-          orderId: job.orderId,
-          orderNumber: job.orderId,
-          status: job.status,
-          trackingNumber: job.result ? job.result.trackingNumber : null,
-          labelFile: job.result ? job.result.labelFile : null,
-          result: job.result,
-          error: job.error,
-          completedAt: job.completedAt
-        })
+        body: JSON.stringify(webhookBody)
       });
       console.log('Webhook callback sent successfully.');
     } catch (webhookErr) {
@@ -197,7 +204,8 @@ app.post('/api/invoice', (req, res) => {
     packageType: parsed.packageType,
     insurance: parsed.insurance,
     incoterms: parsed.incoterms,
-    callbackURL: parsed.callbackURL
+    callbackURL: parsed.callbackURL,
+    orderIdentity: parsed.orderIdentity
   });
 
   res.status(202).json({
@@ -221,7 +229,8 @@ app.post('/api/ship', (req, res) => {
   }
 
   const job = enqueueJob('ship', parsed.orderId, null, {
-    callbackURL: parsed.callbackURL
+    callbackURL: parsed.callbackURL,
+    orderIdentity: parsed.orderIdentity
   });
 
   res.status(202).json({
@@ -249,7 +258,8 @@ app.post('/api/process', (req, res) => {
     incoterms: parsed.incoterms,
     callbackURL: parsed.callbackURL,
     items: parsed.items,
-    numberOfPackages: parsed.numberOfPackages
+    numberOfPackages: parsed.numberOfPackages,
+    orderIdentity: parsed.orderIdentity
   });
 
   res.status(202).json({
