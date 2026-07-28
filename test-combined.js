@@ -12,7 +12,7 @@ combinedFlow({
     {
       name: 'Power Supply',
       sku: 'TP-MTSE-102300',
-      quantity: 1,
+      quantity: 2,
       price: 200,
       weight: 2
     }
