@@ -2,7 +2,7 @@ require('dotenv').config();
 const { combinedFlow } = require('./lib/combinedFlow');
 
 combinedFlow({
-  orderId: '100013783',
+  orderId: '100013786',
   invoiceURL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
   packageType: 'Double Midi Box',
   incoterms: 'DAP', // DAP to verify unchecking the #DTP checkbox
@@ -14,7 +14,7 @@ combinedFlow({
       sku: 'TP-MTSE-102300',
       quantity: 1,
       price: 200,
-      weight: 6
+      weight: 2
     }
   ],
   onProgress: (msg) => console.log('[progress]', msg)
