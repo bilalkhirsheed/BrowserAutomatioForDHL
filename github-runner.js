@@ -60,44 +60,71 @@ async function run() {
   let result = null;
   let error = null;
 
-  try {
-    status = 'processing';
-    
-    if (flowType === 'print') {
-      console.log('Executing DHL Print-Only Process...');
-      result = await printLabel({
-        orderId,
-        onProgress: (msg) => {
-          console.log(`[PROGRESS] ${msg}`);
-          logs.push(msg);
-        }
-      });
-    } else {
-      const skipPrint = (flowType === 'save');
-      console.log(`Executing DHL Combined Flow (skipPrint: ${skipPrint})...`);
-      result = await combinedFlow({
-        orderId,
-        invoiceURL,
-        packageType,
-        incoterms,
-        items,
-        numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null,
-        skipPrint,
-        onProgress: (msg) => {
-          console.log(`[PROGRESS] ${msg}`);
-          logs.push(msg);
-        }
-      });
-    }
+  const maxAttempts = process.env.DHL_MAX_ATTEMPTS ? parseInt(process.env.DHL_MAX_ATTEMPTS, 10) : 3;
+  const waitTimeMs = 10 * 60 * 1000; // 10 minutes
 
-    status = 'completed';
-    logs.push('Job completed successfully');
-    console.log('Automation completed successfully.');
+  try {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      status = 'processing';
+      error = null;
+      result = null;
+
+      try {
+        if (attempt > 1) {
+          console.log(`[RETRY] Attempt ${attempt} of ${maxAttempts} started...`);
+          logs.push(`Attempt ${attempt} of ${maxAttempts} started`);
+        }
+
+        if (flowType === 'print') {
+          console.log('Executing DHL Print-Only Process...');
+          result = await printLabel({
+            orderId,
+            onProgress: (msg) => {
+              console.log(`[PROGRESS] ${msg}`);
+              logs.push(msg);
+            }
+          });
+        } else {
+          const skipPrint = (flowType === 'save');
+          console.log(`Executing DHL Combined Flow (skipPrint: ${skipPrint})...`);
+          result = await combinedFlow({
+            orderId,
+            invoiceURL,
+            packageType,
+            incoterms,
+            items,
+            numberOfPackages: numberOfPackages ? Number(numberOfPackages) : null,
+            skipPrint,
+            onProgress: (msg) => {
+              console.log(`[PROGRESS] ${msg}`);
+              logs.push(msg);
+            }
+          });
+        }
+
+        status = 'completed';
+        logs.push('Job completed successfully');
+        console.log('Automation completed successfully.');
+        break; // Exit the loop on success
+      } catch (err) {
+        status = 'failed';
+        error = err.message || String(err);
+        console.error(`Attempt ${attempt} failed:`, error);
+        logs.push(`Attempt ${attempt} failed: ${error}`);
+
+        const isNotFoundError = error.toLowerCase().includes('not found on orders page');
+        if (isNotFoundError && attempt < maxAttempts) {
+          console.log(`[RETRY] Order not found. Waiting 10 minutes before attempt ${attempt + 1}...`);
+          logs.push(`Order not found. Waiting 10 minutes before attempt ${attempt + 1}`);
+          await new Promise(resolve => setTimeout(resolve, waitTimeMs));
+        } else {
+          throw err; // Propagate error to outer catch block to stop retrying
+        }
+      }
+    }
   } catch (err) {
     status = 'failed';
     error = err.message || String(err);
-    logs.push(`Job failed: ${error}`);
-    console.error('Automation failed:', error);
   } finally {
     const completedAt = new Date().toISOString();
     const githubRunId = process.env.GITHUB_RUN_ID || 'local';
