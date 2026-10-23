@@ -112,7 +112,7 @@ async function run() {
         console.error(`Attempt ${attempt} failed:`, error);
         logs.push(`Attempt ${attempt} failed: ${error}`);
 
-        const isNotFoundError = error.toLowerCase().includes('not found on orders page');
+        const isNotFoundError = error.toLowerCase().includes('not found on orders page') || error.toLowerCase().includes('not found for order');
         if (isNotFoundError && attempt < maxAttempts) {
           console.log(`[RETRY] Order not found. Waiting 10 minutes before attempt ${attempt + 1}...`);
           logs.push(`Order not found. Waiting 10 minutes before attempt ${attempt + 1}`);
